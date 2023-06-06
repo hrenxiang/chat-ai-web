@@ -1,3 +1,5 @@
+基于React、Tailwind、Nextjs、TS等技术搭建的ChatGPT服务。
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ### 消息加载
