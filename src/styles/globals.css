@@ -2,26 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+.chat-container p {
+    padding-bottom: 1.5em;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+.chat-content::-webkit-scrollbar {
+    width: 0.375rem!important;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+.markdown-body table tr {
+    /*background-color: var(--black-31) !important;*/
+    border-top: 1px solid white;
+}
+
+.markdown-body table tr:nth-child(2n) {
+    /*background-color: var(--black-31) !important;*/
+    border-top: 1px solid white;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+    padding: 6px 13px;
+    border: 1px solid white;
+}
+
+.chat-container .code-wrapper:hover .copy-btn {
+    display: block;
+}
+
+.chat-container .copy-btn {
+    display: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    background-color: #343541;
+    color: white;
+    border-radius: 5px;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+.chat-container .copy-btn:hover {
+    background-color: white;
+    color: black;
 }
