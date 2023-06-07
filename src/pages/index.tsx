@@ -54,9 +54,6 @@ export default function Home() {
         // 在 React 中，更新状态是异步的，因此在更新状态后立即设置滚动位置时，可能无法正确计算出最新的滚动高度。为了确保滚动位置能够正确应用，你可以将设置滚动位置的代码包裹在一个 setTimeout 函数中，以便稍微延迟一下执行。
         setTimeout(() => {
             chatContentRef.current!.scrollTop = chatContentRef.current!.scrollHeight;
-            // if (chatContentRef.current) {
-            //     chatContentRef.current.scrollIntoView({ behavior: 'smooth' });
-            // }
         }, 0);
 
 
@@ -135,7 +132,6 @@ export default function Home() {
 
     return (
         <div className="chat">
-
             {contextHolderNotification}
 
             <section className="chat-side-bar">
@@ -209,7 +205,6 @@ export default function Home() {
                                                         className="markdown-body overflow-auto"
                                                         remarkPlugins={[remarkGfm]}
                                                         rehypePlugins={[rehypeRaw]}
-                                                        children={chatLog.message}
                                                         components={{
                                                             code({node, inline, className, children, ...props}) {
                                                                 const match = /language-(\w+)/.exec(className || '');
@@ -222,10 +217,11 @@ export default function Home() {
                                                                                 <SyntaxHighlighter
                                                                                     language={match[1]}
                                                                                     PreTag="div"
-                                                                                    children={String(children).replace(/\n$/, '')}
                                                                                     {...props}
                                                                                     className='code'
-                                                                                />
+                                                                                >
+                                                                                    {String(children).replace(/\n$/, '')}
+                                                                                </SyntaxHighlighter>
                                                                                 <div
                                                                                     className="copy-btn absolute right-1 top-1 text-black leading-6"
                                                                                     onClick={handleCopy}>
@@ -246,7 +242,9 @@ export default function Home() {
                                                                     );
                                                             },
                                                         }}
-                                                    />
+                                                    >
+                                                        {chatLog.message}
+                                                    </ReactMarkdown>
                                                 </div>
                                             </div>
                                             {/*<hr className="text-black"/>*/}
