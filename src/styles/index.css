@@ -1,0 +1,87 @@
+.chat {
+    margin: 0;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    color: #fff;
+}
+
+.chat-side-bar {
+    background: #202123;
+    width: 300px;
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+}
+
+.chat-side-bar button {
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background-color: transparent;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px;
+    color: #fff;
+    cursor: pointer;
+}
+
+.chat-side-bar nav {
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 10px;
+    margin: 10px;
+}
+
+.chat-history::-webkit-scrollbar {
+    width: 0 !important;
+}
+
+.chat-body {
+    width: calc(100vw - 300px);
+}
+
+.chat-body p {
+    padding-bottom: 1.5em;
+}
+
+.chat-body-content::-webkit-scrollbar {
+    width: 0.375rem !important;
+}
+
+.markdown-body table tr {
+    /*background-color: var(--black-31) !important;*/
+    border-top: 1px solid white;
+}
+
+.markdown-body table tr:nth-child(2n) {
+    /*background-color: var(--black-31) !important;*/
+    border-top: 1px solid white;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+    padding: 6px 13px;
+    border: 1px solid white;
+}
+
+.chat-body .code-wrapper:hover .copy-btn {
+    display: block;
+}
+
+.chat-body .copy-btn {
+    display: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    background-color: white;
+    color: black;
+    border-radius: 5px;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+.chat-body .copy-btn:hover {
+    background-color: #444654;
+    color: white;
+}
