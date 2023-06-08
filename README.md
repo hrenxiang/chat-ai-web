@@ -2,12 +2,21 @@
 
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-### 消息加载
+### 页面第一版 - 消息加载
 ![loading](https://images.huangrx.cn/uploads/2023/06/06/chat-ai-loading.png)
 
-### 消息回复
+### 页面第一版 - 消息回复
 ![chat-ai-replay](https://images.huangrx.cn/uploads/2023/06/06/chat-ai-replay.png)
 
+### 页面第二版 - 主页
+![new-tab](https://images.huangrx.cn/uploads/2023/06/08/1686214061197.png)
+
+### 页面第二版 - 消息回复
+![chat-ai-replay](https://images.huangrx.cn/uploads/2023/06/08/1686214263254.png)
+
+### 页面第二版 - 响应式
+![chat-ai-replay](https://images.huangrx.cn/uploads/2023/06/08/1686214300328.png)
+![chat-ai-replay](https://images.huangrx.cn/uploads/2023/06/08/1686214323217.png)
 ### 快速开始
 
 First, run the development server:
