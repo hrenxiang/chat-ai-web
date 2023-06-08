@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500&display=swap');
 
 .chat {
-    font-family: 'Ma Shan Zheng', cursive;
+    font-family: 'Noto Serif SC', serif;
     margin: 0;
     overflow: hidden;
     width: 100vw;
@@ -177,7 +177,6 @@
 }
 
 .card__category {
-    font-family: 'Roboto Slab', serif;
     text-transform: uppercase;
     font-size: 13px;
     letter-spacing: 2px;
@@ -188,7 +187,6 @@
 .card__title {
     margin-top: 5px;
     margin-bottom: 10px;
-    font-family: 'Ma Shan Zheng', cursive;
 }
 
 .card:hover .card__img--hover {
