@@ -10,10 +10,9 @@ import {CopyToClipboard} from 'react-copy-to-clipboard';
 import {HiOutlineCheck} from 'react-icons/hi'
 import {message, notification} from 'antd';
 import {IoSend} from "react-icons/io5";
-import {BiKey, BiMessageDetail} from "react-icons/bi";
+import {BiMessageDetail} from "react-icons/bi";
 import {darcula} from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {MdDeleteOutline, MdOutlineGridView} from "react-icons/md";
-import {GrFormClose} from "react-icons/gr";
 import {RiCloseFill} from "react-icons/ri";
 import {TbCircleKeyFilled, TbSettingsFilled} from "react-icons/tb";
 
@@ -45,6 +44,10 @@ export default function Home() {
         if (storedChatLogs) {
             chatLogsRef.current = JSON.parse(storedChatLogs) as ChatMessage[];
         }
+        const storedApikey = localStorage.getItem("OPENAI-API-KEY");
+        if (storedApikey) {
+            setInputApikey(storedApikey);
+        }
     }, []);
 
     // 当chatLogs发生变化时，将其保存到本地存储中，并实时滑动到底部
@@ -70,9 +73,7 @@ export default function Home() {
     }, [chatLogs, currentTitle]);
 
     const handleSubmit = () => {
-        const storedApikey = localStorage.getItem("OPENAI-API-KEY");
-
-        if (!storedApikey) {
+        if (!inputApikey || !localStorage.getItem("OPENAI-API-KEY")) {
             handleApikeyNotExist();
         } else {
             if (!currentTitle && inputValue) {
@@ -89,7 +90,7 @@ export default function Home() {
                 }
             ])
 
-            sendMessage(inputValue, storedApikey);
+            sendMessage(inputValue, inputApikey);
             setInputValue('');
         }
     }
