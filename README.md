@@ -17,6 +17,10 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 ### 页面第二版 - 响应式
 ![chat-ai-replay](https://images.huangrx.cn/uploads/2023/06/08/1686214300328.png)
 ![chat-ai-replay](https://images.huangrx.cn/uploads/2023/06/08/1686214323217.png)
+
+### 添加设置页
+![settings](https://images.huangrx.cn/uploads/2023/06/09/chat-ai-setting.png)
+
 ### 快速开始
 
 First, run the development server:
