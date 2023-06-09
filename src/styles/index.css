@@ -21,7 +21,7 @@
     text-align: center;
 }
 
-.chat-side-bar button {
+.chat-side-bar .new-chat {
     border: 1px solid rgba(255, 255, 255, 0.5);
     background-color: transparent;
     border-radius: 5px;
@@ -31,10 +31,9 @@
     cursor: pointer;
 }
 
-.chat-side-bar nav {
-    border-top: 1px solid rgba(255, 255, 255, 0.5);
-    padding: 10px;
-    margin: 10px;
+.chat-side-bar .new-chat:hover {
+    --tw-bg-opacity: 1;
+    background-color: rgb(107 114 128 / var(--tw-bg-opacity));
 }
 
 .chat-history::-webkit-scrollbar {
@@ -105,6 +104,13 @@
 
 .chat-body-textarea::-webkit-scrollbar {
     width: 0 !important;
+}
+
+.chat .show-settings {
+    position: fixed;
+    z-index: 100;
+    width: 100vw;
+    height: 100vh;
 }
 
 .cards {

@@ -8,13 +8,14 @@ import ReactMarkdown from 'react-markdown';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import {HiOutlineCheck} from 'react-icons/hi'
-import {notification} from 'antd';
+import {message, notification} from 'antd';
 import {IoSend} from "react-icons/io5";
-import {BiMessageDetail} from "react-icons/bi";
+import {BiKey, BiMessageDetail} from "react-icons/bi";
 import {darcula} from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {MdDeleteOutline, MdOutlineGridView} from "react-icons/md";
 import {GrFormClose} from "react-icons/gr";
 import {RiCloseFill} from "react-icons/ri";
+import {TbCircleKeyFilled, TbSettingsFilled} from "react-icons/tb";
 
 const inter = Inter({subsets: ['latin']})
 
@@ -29,9 +30,13 @@ export default function Home() {
     const currentTitleRef = useRef<string>(currentTitle);
     const [currentChatLogs, setCurrentChatLogs] = useState<ChatMessage[]>([]);
     const [uniqueTitles, setUniqueTitles] = useState<string[]>([]);
-    const [showMenuFlag, setShowMenuFlag] = useState<boolean>(false);
+    const [showSideBarFlag, setShowSideBarFlag] = useState<boolean>(false);
+    const [showSettingsFlag, setShowSettingsFlag] = useState<boolean>(false);
+    const [settingsOption, setSettingsOption] = useState<string>('');
+    const [inputApikey, setInputApikey] = useState<string>('');
     // 代码块复制通知
     const [notificationApi, contextHolderNotification] = notification.useNotification();
+    const [messageApi, contextHolderMessage] = message.useMessage();
     const chatContentRef = useRef<HTMLDivElement>(null);
 
     // 在组件加载时从本地存储中检索chatLogs
@@ -65,52 +70,59 @@ export default function Home() {
     }, [chatLogs, currentTitle]);
 
     const handleSubmit = () => {
-        if (!currentTitle && inputValue) {
-            setCurrentTitle(inputValue);
-            currentTitleRef.current = inputValue;
-        }
+        const storedApikey = localStorage.getItem("OPENAI-API-KEY");
 
-        setChatLogs((prevChatLogs) => [
-            ...prevChatLogs,
-            {
-                title: currentTitleRef.current,
-                type: "user",
-                message: inputValue
+        if (!storedApikey) {
+            handleApikeyNotExist();
+        } else {
+            if (!currentTitle && inputValue) {
+                setCurrentTitle(inputValue);
+                currentTitleRef.current = inputValue;
             }
-        ])
 
-        sendMessage(inputValue);
-        setInputValue('');
-    }
-
-    const sendMessage = (message: string) => {
-        // const url = "/api/chat";
-        const url = "https://api.openai.com/v1/chat/completions";
-        const header = {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
-        };
-        const data = {
-            model: "gpt-3.5-turbo",
-            messages: [{"role": "user", "content": message}],
-        }
-
-        setIsLoading(true);
-
-        axios.post(url, data, {headers: header}).then((res) => {
             setChatLogs((prevChatLogs) => [
                 ...prevChatLogs,
                 {
                     title: currentTitleRef.current,
-                    type: res.data.choices[0].message.role,
-                    message: res.data.choices[0].message.content
+                    type: "user",
+                    message: inputValue
                 }
             ])
-            setIsLoading(false);
-        }).catch((error) => {
-            setIsLoading(false);
-            console.log(error);
-        })
+
+            sendMessage(inputValue, storedApikey);
+            setInputValue('');
+        }
+    }
+
+    const sendMessage = (message: string, storedApikey: string) => {
+            // const url = "/api/chat";
+            const url = "https://api.openai.com/v1/chat/completions";
+            const header = {
+                "Content-Type": "application/json",
+                // "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+                "Authorization": `Bearer ${storedApikey}`
+            };
+            const data = {
+                model: "gpt-3.5-turbo",
+                messages: [{"role": "user", "content": message}],
+            }
+
+            setIsLoading(true);
+
+            axios.post(url, data, {headers: header}).then((res) => {
+                setChatLogs((prevChatLogs) => [
+                    ...prevChatLogs,
+                    {
+                        title: currentTitleRef.current,
+                        type: res.data.choices[0].message.role,
+                        message: res.data.choices[0].message.content
+                    }
+                ])
+                setIsLoading(false);
+            }).catch((error) => {
+                setIsLoading(false);
+                console.log(error);
+            })
     }
 
     const handleCopy = () => {
@@ -120,6 +132,39 @@ export default function Home() {
                 '代码复制到剪贴板!',
             icon: <HiOutlineCheck/>,
             duration: 2,
+        });
+    };
+
+    const handleClear = () => {
+        messageApi.open({
+            type: 'warning',
+            content: '所有聊天已清除！',
+        }).then(r => {
+        });
+    };
+
+    const handleApikeyNotExist = () => {
+        notificationApi.error({
+            message: 'ApiKey不存在！',
+            description:
+                '请在Open AI官网生成自己的KEY并设置！!',
+            duration: 5,
+        });
+    };
+
+    const handleSaveApikeySuccess = () => {
+        messageApi.open({
+            type: 'success',
+            content: 'ApiKey已保存！',
+        }).then(r => {
+        });
+    };
+
+    const handleSaveApikeyError = () => {
+        messageApi.open({
+            type: 'error',
+            content: '您未输入ApiKey，请重新输入！',
+        }).then(r => {
         });
     };
 
@@ -145,7 +190,7 @@ export default function Home() {
         setCurrentTitle('');
     }
 
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault(); // 阻止默认的换行行为
             // 在此处执行提交操作，例如调用提交函数或处理表单数据
@@ -153,17 +198,42 @@ export default function Home() {
         }
     }
 
-    const showMenu = () => {
-        console.log(showMenuFlag)
-        setShowMenuFlag(!showMenuFlag);
+    const showSideBar = () => {
+        setShowSideBarFlag(!showSideBarFlag);
+    }
+
+    const showSettings = () => {
+        setShowSettingsFlag(!showSettingsFlag);
+        setSettingsOption("general");
+    }
+
+    const clearAllChats = () => {
+        localStorage.removeItem('CHAT-LOGS');
+        setCurrentTitle('');
+        setChatLogs([]);
+    }
+
+    const openSettingsOption = (option: string) => {
+        console.log(option)
+        setSettingsOption(option);
+    }
+
+    const handleSaveApiKey = () => {
+        if (!inputApikey) {
+            handleSaveApikeyError();
+        } else {
+            localStorage.setItem('OPENAI-API-KEY', inputApikey);
+            handleSaveApikeySuccess();
+        }
     }
 
     return (
-        <div className="chat">
+        <div className="chat text-[0.9rem]">
+            {contextHolderMessage}
             {contextHolderNotification}
 
-            <section className={`chat-side-bar ${showMenuFlag ? 'show-menu' : ''}`}>
-                <button className="hover:bg-gray-500" onClick={createNewChat}>+ New chat</button>
+            <section className={`chat-side-bar ${showSideBarFlag ? 'show-menu' : ''}`}>
+                <button className="new-chat" onClick={createNewChat}>+ New chat</button>
                 {/*这里有一个flex布局，设置中间的高度为100%即可填充满*/}
                 <ul className="chat-history d m-[10px] text-left h-[100%] ">
                     {
@@ -185,18 +255,28 @@ export default function Home() {
                         })
                     }
                 </ul>
-                <nav>
-                    <p>
-                        Made By Huangrx
-                    </p>
+                <nav className="border-t border-solid border-white border-opacity-50 px-2 py-3" onClick={showSettings}>
+                    <button
+                        className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]">
+                        <div>
+                            Made By Huangrx
+                        </div>
+                        <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24"
+                             strokeLinecap="round" strokeLinejoin="round"
+                             className="h-4 w-4 flex-shrink-0 text-gray-500" height="1em" width="1em"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="19" cy="12" r="1"></circle>
+                            <circle cx="5" cy="12" r="1"></circle>
+                        </svg>
+
+                    </button>
                 </nav>
-
-
             </section>
 
             <section className="chat-body h-[100%]  flex flex-col bg-[#444654]">
-                <div className="flex justify-start items-center md:invisible md:hidden px-6 py-2 bg-[#343541] text-xs">
-                    <MdOutlineGridView className="justify-start" onClick={showMenu}/>
+                <div className="flex justify-start items-center md:invisible md:hidden px-6 py-2 bg-[#343541]">
+                    <MdOutlineGridView className="justify-start" onClick={showSideBar}/>
                     <div className="justify-end flex-grow text-center">
                         {currentTitle}
                     </div>
@@ -206,7 +286,8 @@ export default function Home() {
                     {
                         currentTitle.length === 0 ?
                             <div className="h-[100%] text-center mx-auto">
-                                <h1 className="text-white bg-clip-text pt-[5vh] md:pt-[15vh] font-bold text-[20px] pb-[2vh]">Huangrx`s Chat
+                                <h1 className="text-white bg-clip-text pt-[5vh] md:pt-[15vh] font-bold text-[20px] pb-[2vh]">Huangrx`s
+                                    Chat
                                     Ai Bot</h1>
                                 <div className="cards">
                                     <article className="card card--1">
@@ -216,7 +297,9 @@ export default function Home() {
                                         </a>
                                         <div className="card__info">
                                             <span className="card__category">Introducing ChatGPT</span>
-                                            <p className="card__title">OpenAI 的 GPT（生成式预训练转换器）模型经过训练可以理解自然语言和代码。GPT 提供文本输出以响应其输入。GPT 的输入也称为“提示”。设计提示本质上是您“编程”GPT 模型的方式，通常是通过提供说明或一些示例来说明如何成功完成任务。</p>
+                                            <p className="card__title">OpenAI 的 GPT（生成式预训练转换器）模型经过训练可以理解自然语言和代码。GPT
+                                                提供文本输出以响应其输入。GPT 的输入也称为“提示”。设计提示本质上是您“编程”GPT
+                                                模型的方式，通常是通过提供说明或一些示例来说明如何成功完成任务。</p>
                                         </div>
                                     </article>
                                 </div>
@@ -231,7 +314,7 @@ export default function Home() {
                                                     <div
                                                         className={`${chatLog.type === 'user' ? 'bg-customBlack' : 'bg-customBlack2'}`}>
                                                         <div
-                                                            className="flex p-4 gap-4 text-[1rem] leading-8 text-white md:gap-6 md:max-w-2xl lg:max-w-[38rem] xl:max-w-3xl md:py-6 lg:px-0 m-auto ">
+                                                            className="flex p-4 gap-4 leading-8 text-white md:gap-6 md:max-w-2xl lg:max-w-[38rem] xl:max-w-3xl md:py-6 lg:px-0 m-auto ">
                                                             <div className="min-w-[24px] min-h-[24px] pt-1">
                                                                 {
                                                                     chatLog.type !== 'user' ?
@@ -328,7 +411,7 @@ export default function Home() {
                                         isLoading &&
                                         <div className="bg-customBlack2">
                                             <div
-                                                className="flex p-4 pl-0 gap-4 text-[1rem] leading-8 text-white md:gap-6 md:max-w-2xl lg:max-w-[38rem] xl:max-w-3xl md:py-6 lg:px-0 m-auto">
+                                                className="flex p-4 pl-0 gap-4 leading-8 text-white md:gap-6 md:max-w-2xl lg:max-w-[38rem] xl:max-w-3xl md:py-6 lg:px-0 m-auto">
                                                 <div
                                                     className="flex rounded-lg p-4 text-white">
                                                     <TypingAnimation/>
@@ -350,7 +433,7 @@ export default function Home() {
                                     placeholder="Type your message ..."
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(e)}/>
+                                    onKeyDown={(e) => handleInputKeyDown(e)}/>
                             <button
                                 className="roudned-lg p-4 y-[15px] md:p-6 rounded-r-xl text-white font-semibold focus:outline-none transition-colors duration-300"
                                 type="submit"
@@ -368,8 +451,90 @@ export default function Home() {
                 </div>
             </section>
 
-            <div className={`${showMenuFlag ? 'show-menu-close' : 'invisible hidden'}`}>
-                <RiCloseFill className="show-menu-close-icon" onClick={showMenu}/>
+            {/*chat-side-bar 在小屏幕端时的关闭按钮*/}
+            <div className={`${showSideBarFlag ? 'show-menu-close md:invisible md:hidden' : 'invisible hidden'}`}>
+                <RiCloseFill className="show-menu-close-icon" onClick={showSideBar}/>
+            </div>
+
+            <div
+                className={`${showSettingsFlag ? 'show-settings bg-black bg-opacity-80 flex items-center justify-center' : 'invisible hidden'}`}>
+                <div
+                    className="bg-[#202123] max-w-[90vw] min-w-[80vw] md:max-w-[680px] md:min-w-[680px] min-h-[500px] rounded-[5px] pb-12">
+                    <div
+                        className="flex justify-between items-center border-b border-[#373839] px-4 pb-4 pt-5 sm:p-6 text-[1rem] font-bold">
+                        <div>
+                            <h2>Settings</h2>
+                        </div>
+                        <div className="hover:cursor-pointer">
+                            <RiCloseFill className="" onClick={showSettings}/>
+                        </div>
+                    </div>
+                    <div className="flex flex-col md:flex-row justify-between gap-3 px-4 pb-4 pt-5 sm:p-6">
+                        <div
+                            className="flex flex-row md:flex-col md:w-1/4 bg-[#26272c] md:bg-transparent p-1 rounded-[5px]">
+                            <button
+                                className={'general' === settingsOption ? 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 bg-[#343541] h-[3rem] max-h-[3rem]':'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 h-[3rem] max-h-[3rem]'}
+                                onClick={() => openSettingsOption("general")}>
+                                <div>
+                                    <TbSettingsFilled/>
+                                </div>
+                                <div className="flex-grow text-left">
+                                    General
+                                </div>
+                            </button>
+                            <button
+                                className={'apikey' === settingsOption ? 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 bg-[#343541]  h-[3rem] max-h-[3rem]':'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 h-[3rem] max-h-[3rem]'}
+                                onClick={() => openSettingsOption("apikey")}>
+                                <div>
+                                    <TbCircleKeyFilled/>
+                                </div>
+                                <div className="flex-grow text-left">
+                                    Apikey
+                                </div>
+                            </button>
+                        </div>
+                        <div
+                            className={'general' === settingsOption ? 'flex-grow flex flex-col gap-3 h-full px-2 py-1.5' : 'hidden invisible'}>
+                            <div className="flex justify-between items-center border-b pb-3 border-[#373839]">
+                                <div>
+                                    Theme
+                                </div>
+                                <select
+                                    className="rounded-[5px] border border-[#373839] text-gray-500 bg-transparent px-1 py-2">
+                                    <option value="system">System</option>
+                                    <option value="dark">Dark</option>
+                                    <option value="light">Light</option>
+                                </select>
+                            </div>
+                            <div className="flex justify-between items-center pb-3">
+                                <div>
+                                    Clear all chats
+                                </div>
+                                <button className="bg-red-500 px-3 py-1.5 rounded-[5px] hover:bg-red-700"
+                                        onClick={clearAllChats}>
+                                    <div className="flex w-full gap-2 items-center justify-center"
+                                         onClick={handleClear}>Clear
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            className={'apikey' === settingsOption ? 'flex-grow flex flex-col gap-3 h-full px-2 py-3 md:py-1.5' : 'hidden invisible'}>
+                            <div className="flex flex-col gap-5 border-b pb-3 border-[#373839]">
+                                <div>
+                                    <input
+                                        className="bg-transparent border-b-2 border-dashed border-b-[#ea95e0] p-1 mr-3 focus:outline-none w-full"
+                                        value={inputApikey}
+                                        onChange={(e) => setInputApikey(e.target.value)}
+                                        type="text" required/>
+                                </div>
+                                <div className="flex justify-end">
+                                    <button className="bg-[#40414f] px-3 py-1.5 rounded-[5px] hover:bg-gray-500" onClick={handleSaveApiKey}>保存</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     )
