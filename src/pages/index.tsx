@@ -222,6 +222,12 @@ export default function Home() {
 
         setCurrentTitleId('');
         setInputValue('')
+
+        messageApi.open({
+            type: 'success',
+            content: '相应标题会话删除成功！',
+        }).then(() => {
+        });
     }
 
     const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -298,6 +304,12 @@ export default function Home() {
 
         setEditingIndex(-1);
         setEditedText('');
+
+        messageApi.open({
+            type: 'success',
+            content: '会话标题更新成功！',
+        }).then(() => {
+        });
     }
 
     const handleEditingIndex = () => {
