@@ -15,6 +15,7 @@ import {darcula} from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {MdDeleteOutline, MdOutlineGridView} from "react-icons/md";
 import {RiCloseFill} from "react-icons/ri";
 import {TbCircleKeyFilled, TbSettingsFilled} from "react-icons/tb";
+import Link from "next/link";
 
 const inter = Inter({subsets: ['latin']})
 
@@ -96,34 +97,34 @@ export default function Home() {
     }
 
     const sendMessage = (message: string, storedApikey: string) => {
-            // const url = "/api/chat";
-            const url = "https://api.openai.com/v1/chat/completions";
-            const header = {
-                "Content-Type": "application/json",
-                // "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
-                "Authorization": `Bearer ${storedApikey}`
-            };
-            const data = {
-                model: "gpt-3.5-turbo",
-                messages: [{"role": "user", "content": message}],
-            }
+        // const url = "/api/chat";
+        const url = "https://api.openai.com/v1/chat/completions";
+        const header = {
+            "Content-Type": "application/json",
+            // "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+            "Authorization": `Bearer ${storedApikey}`
+        };
+        const data = {
+            model: "gpt-3.5-turbo",
+            messages: [{"role": "user", "content": message}],
+        }
 
-            setIsLoading(true);
+        setIsLoading(true);
 
-            axios.post(url, data, {headers: header}).then((res) => {
-                setChatLogs((prevChatLogs) => [
-                    ...prevChatLogs,
-                    {
-                        title: currentTitleRef.current,
-                        type: res.data.choices[0].message.role,
-                        message: res.data.choices[0].message.content
-                    }
-                ])
-                setIsLoading(false);
-            }).catch((error) => {
-                setIsLoading(false);
-                console.log(error);
-            })
+        axios.post(url, data, {headers: header}).then((res) => {
+            setChatLogs((prevChatLogs) => [
+                ...prevChatLogs,
+                {
+                    title: currentTitleRef.current,
+                    type: res.data.choices[0].message.role,
+                    message: res.data.choices[0].message.content
+                }
+            ])
+            setIsLoading(false);
+        }).catch((error) => {
+            setIsLoading(false);
+            console.log(error);
+        })
     }
 
     const handleCopy = () => {
@@ -256,9 +257,14 @@ export default function Home() {
                         })
                     }
                 </ul>
-                <nav className="border-t border-solid border-white border-opacity-50 px-2 py-3" onClick={showSettings}>
+                <nav className="flex flex-col gap-1 border-t border-solid border-white border-opacity-50 px-2 py-3">
                     <button
                         className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]">
+                        <Link href="https://blog.huangrx.cn">Huangrx's blog</Link>
+                    </button>
+                    <button
+                        className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]"
+                        onClick={showSettings}>
                         <div>
                             Made By Huangrx
                         </div>
@@ -474,7 +480,7 @@ export default function Home() {
                         <div
                             className="flex flex-row md:flex-col md:w-1/4 bg-[#26272c] md:bg-transparent p-1 rounded-[5px]">
                             <button
-                                className={'general' === settingsOption ? 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 bg-[#343541] h-[3rem] max-h-[3rem]':'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 h-[3rem] max-h-[3rem]'}
+                                className={'general' === settingsOption ? 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 bg-[#343541] h-[3rem] max-h-[3rem]' : 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 h-[3rem] max-h-[3rem]'}
                                 onClick={() => openSettingsOption("general")}>
                                 <div>
                                     <TbSettingsFilled/>
@@ -484,7 +490,7 @@ export default function Home() {
                                 </div>
                             </button>
                             <button
-                                className={'apikey' === settingsOption ? 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 bg-[#343541]  h-[3rem] max-h-[3rem]':'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 h-[3rem] max-h-[3rem]'}
+                                className={'apikey' === settingsOption ? 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 bg-[#343541]  h-[3rem] max-h-[3rem]' : 'flex-grow appearance-none focus:outline-none flex justify-between items-center gap-2 rounded-md px-2 py-1.5 h-[3rem] max-h-[3rem]'}
                                 onClick={() => openSettingsOption("apikey")}>
                                 <div>
                                     <TbCircleKeyFilled/>
@@ -530,7 +536,9 @@ export default function Home() {
                                         type="text" required/>
                                 </div>
                                 <div className="flex justify-end">
-                                    <button className="bg-[#40414f] px-3 py-1.5 rounded-[5px] hover:bg-gray-500" onClick={handleSaveApiKey}>保存</button>
+                                    <button className="bg-[#40414f] px-3 py-1.5 rounded-[5px] hover:bg-gray-500"
+                                            onClick={handleSaveApiKey}>保存
+                                    </button>
                                 </div>
                             </div>
                         </div>
