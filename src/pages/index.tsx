@@ -8,14 +8,16 @@ import ReactMarkdown from 'react-markdown';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import {HiOutlineCheck} from 'react-icons/hi'
-import {message, notification} from 'antd';
+import {message, notification, Select} from 'antd';
 import {IoSend} from "react-icons/io5";
 import {BiMessageDetail} from "react-icons/bi";
 import {darcula} from "react-syntax-highlighter/dist/cjs/styles/prism";
-import {MdDeleteOutline, MdOutlineGridView} from "react-icons/md";
-import {RiCloseFill} from "react-icons/ri";
+import {MdDeleteOutline, MdDriveFileRenameOutline, MdOutlineGridView} from "react-icons/md";
+import {RiCheckFill, RiCloseFill, RiMoreLine} from "react-icons/ri";
 import {TbCircleKeyFilled, TbSettingsFilled} from "react-icons/tb";
 import Link from "next/link";
+import {v4 as uuidv4} from "uuid";
+import {IoIosArrowRoundForward} from "react-icons/io";
 
 const inter = Inter({subsets: ['latin']})
 
@@ -25,15 +27,18 @@ export default function Home() {
     const [chatLogs, setChatLogs] = useState<ChatMessage[]>([]);
     const chatLogsRef = useRef<ChatMessage[]>(chatLogs);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [chatTitles, setChatTitles] = useState<ChatTitle[]>([]);
     // 使用 useRef 来保存 currentTitle 的值，确保了在异步回调函数中使用的是最新的值
-    const [currentTitle, setCurrentTitle] = useState<string>('')
-    const currentTitleRef = useRef<string>(currentTitle);
+    const [currentTitleId, setCurrentTitleId] = useState<string>('')
+    const currentTitleIdRef = useRef<string>(currentTitleId);
     const [currentChatLogs, setCurrentChatLogs] = useState<ChatMessage[]>([]);
-    const [uniqueTitles, setUniqueTitles] = useState<string[]>([]);
     const [showSideBarFlag, setShowSideBarFlag] = useState<boolean>(false);
     const [showSettingsFlag, setShowSettingsFlag] = useState<boolean>(false);
     const [settingsOption, setSettingsOption] = useState<string>('');
     const [inputApikey, setInputApikey] = useState<string>('');
+    const [editedText, setEditedText] = useState<string>('');
+    const [editingIndex, setEditingIndex] = useState<number>(-1);
+    const inputEditedRef = useRef(null);
     // 代码块复制通知
     const [notificationApi, contextHolderNotification] = notification.useNotification();
     const [messageApi, contextHolderMessage] = message.useMessage();
@@ -42,8 +47,10 @@ export default function Home() {
     // 在组件加载时从本地存储中检索chatLogs
     useEffect(() => {
         const storedChatLogs = localStorage.getItem('CHAT-LOGS');
-        if (storedChatLogs) {
+        const storedChatTitles = localStorage.getItem('CHAT-TITLES');
+        if (storedChatLogs && storedChatTitles) {
             chatLogsRef.current = JSON.parse(storedChatLogs) as ChatMessage[];
+            setChatTitles(JSON.parse(storedChatTitles) as ChatTitle[]);
         }
         const storedApikey = localStorage.getItem("OPENAI-API-KEY");
         if (storedApikey) {
@@ -54,77 +61,105 @@ export default function Home() {
     // 当chatLogs发生变化时，将其保存到本地存储中，并实时滑动到底部
     useEffect(() => {
         if (chatLogsRef && chatLogsRef.current.length !== 0 && chatLogs.length === 0) {
-            setCurrentChatLogs(chatLogs.filter(chatLog => chatLog.title === currentTitle));
-            setUniqueTitles(Array.from(new Set(chatLogsRef.current.map(chatLog => chatLog.title))));
+            setCurrentChatLogs(chatLogs.filter(chatLog => chatLog.id === currentTitleId));
             setChatLogs(chatLogsRef.current);
         } else {
-            setCurrentChatLogs(chatLogs.filter(chatLog => chatLog.title === currentTitle));
-            setUniqueTitles(Array.from(new Set(chatLogs.map(chatLog => chatLog.title))));
+            setCurrentChatLogs(chatLogs.filter(chatLog => chatLog.id === currentTitleId));
             localStorage.setItem('CHAT-LOGS', JSON.stringify(chatLogs));
-
+            localStorage.setItem('CHAT-TITLES', JSON.stringify(chatTitles));
             chatLogsRef.current = [];
+
+            // 在 React 中，更新状态是异步的，因此在更新状态后立即设置滚动位置时，可能无法正确计算出最新的滚动高度。为了确保滚动位置能够正确应用，你可以将设置滚动位置的代码包裹在一个 setTimeout 函数中，以便稍微延迟一下执行。
+            setTimeout(() => {
+                chatContentRef.current!.scrollTop = chatContentRef.current!.scrollHeight;
+            }, 0);
         }
 
-        // 在 React 中，更新状态是异步的，因此在更新状态后立即设置滚动位置时，可能无法正确计算出最新的滚动高度。为了确保滚动位置能够正确应用，你可以将设置滚动位置的代码包裹在一个 setTimeout 函数中，以便稍微延迟一下执行。
-        setTimeout(() => {
-            chatContentRef.current!.scrollTop = chatContentRef.current!.scrollHeight;
-        }, 0);
+    }, [chatLogs, currentTitleId]);
 
-
-    }, [chatLogs, currentTitle]);
+    const acquireModelList = () => {
+        const url = "https://api.openai.com/v1/models";
+        const header = {
+            "Content-Type": "application/json",
+            // "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+            "Authorization": `Bearer ${inputApikey}`
+        };
+        axios.get(url, {headers: header}).then(res => {
+            console.log(res);
+        }).catch(error => {
+            console.log(error);
+        })
+    }
 
     const handleSubmit = () => {
         if (!inputApikey || !localStorage.getItem("OPENAI-API-KEY")) {
             handleApikeyNotExist();
         } else {
-            if (!currentTitle && inputValue) {
-                setCurrentTitle(inputValue);
-                currentTitleRef.current = inputValue;
+            if (!currentTitleId && inputValue) {
+                const uuid = uuidv4()
+                setChatTitles((prevChatTitles) => [
+                    ...prevChatTitles,
+                    {
+                        id: uuid,
+                        title: inputValue
+                    }
+                ]);
+
+                setCurrentTitleId(uuid);
+                currentTitleIdRef.current = uuid;
             }
 
             setChatLogs((prevChatLogs) => [
                 ...prevChatLogs,
                 {
-                    title: currentTitleRef.current,
-                    type: "user",
-                    message: inputValue
+                    id: currentTitleIdRef.current,
+                    role: "user",
+                    content: inputValue
                 }
             ])
 
-            sendMessage(inputValue, inputApikey);
+            // const url = "/api/chat";
+            const url = "https://api.openai.com/v1/chat/completions";
+            const header = {
+                "Content-Type": "application/json",
+                // "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
+                "Authorization": `Bearer ${inputApikey}`
+            };
+            const prevChatRequestMessages = currentChatLogs.map(({id, role, content}) => ({role, content}));
+            const chatRequestMessages = [...prevChatRequestMessages, {role: 'user', content: inputValue}];
+            const data = {
+                model: "gpt-3.5-turbo",
+                messages: chatRequestMessages,
+            }
+
+            setIsLoading(true);
+
+            axios.post(url, data, {headers: header}).then((res) => {
+                setChatLogs((prevChatLogs) => [
+                    ...prevChatLogs,
+                    {
+                        id: currentTitleIdRef.current,
+                        role: res.data.choices[0].message.role,
+                        content: res.data.choices[0].message.content
+                    }
+                ])
+                setIsLoading(false);
+            }).catch((error) => {
+                if (error.response.status === 429) {
+                    setChatLogs((prevChatLogs) => [
+                        ...prevChatLogs,
+                        {
+                            id: currentTitleIdRef.current,
+                            role: 'assistant',
+                            content: '抱歉，您的输入过快，请稍后重试~'
+                        }
+                    ])
+                }
+                setIsLoading(false);
+                console.log(error);
+            })
             setInputValue('');
         }
-    }
-
-    const sendMessage = (message: string, storedApikey: string) => {
-        // const url = "/api/chat";
-        const url = "https://api.openai.com/v1/chat/completions";
-        const header = {
-            "Content-Type": "application/json",
-            // "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`
-            "Authorization": `Bearer ${storedApikey}`
-        };
-        const data = {
-            model: "gpt-3.5-turbo",
-            messages: [{"role": "user", "content": message}],
-        }
-
-        setIsLoading(true);
-
-        axios.post(url, data, {headers: header}).then((res) => {
-            setChatLogs((prevChatLogs) => [
-                ...prevChatLogs,
-                {
-                    title: currentTitleRef.current,
-                    type: res.data.choices[0].message.role,
-                    message: res.data.choices[0].message.content
-                }
-            ])
-            setIsLoading(false);
-        }).catch((error) => {
-            setIsLoading(false);
-            console.log(error);
-        })
     }
 
     const handleCopy = () => {
@@ -141,7 +176,7 @@ export default function Home() {
         messageApi.open({
             type: 'warning',
             content: '所有聊天已清除！',
-        }).then(r => {
+        }).then(() => {
         });
     };
 
@@ -158,7 +193,7 @@ export default function Home() {
         messageApi.open({
             type: 'success',
             content: 'ApiKey已保存！',
-        }).then(r => {
+        }).then(() => {
         });
     };
 
@@ -166,30 +201,27 @@ export default function Home() {
         messageApi.open({
             type: 'error',
             content: '您未输入ApiKey，请重新输入！',
-        }).then(r => {
+        }).then(() => {
         });
     };
 
     const createNewChat = () => {
         setInputValue('');
-        setCurrentTitle('');
+        setCurrentTitleId('');
     }
 
-    const uniqueTitleSwitch = (currentTitle: string) => {
-        setCurrentTitle(currentTitle);
-        currentTitleRef.current = currentTitle;
+    const titleSwitch = (currentTitle: string) => {
+        setCurrentTitleId(currentTitle);
+        currentTitleIdRef.current = currentTitle;
     }
 
-    const deleteUniqueTitle = (uniqueTitle: string) => {
-        // 删除 uniqueTitles 中的一个 title
-        const updatedUniqueTitles = uniqueTitles.filter(title => title !== uniqueTitle);
-        setUniqueTitles(updatedUniqueTitles);
-
+    const deleteTitle = (titleId: string) => {
         // 删除 chatLogs 中对应的部分
-        const updatedChatLogs = chatLogs.filter(chatLog => chatLog.title !== uniqueTitle);
-        setChatLogs(updatedChatLogs);
+        setChatLogs(chatLogs.filter(chatLog => chatLog.id !== titleId));
+        setChatTitles(chatTitles.filter(chatTitle => chatTitle.id !== titleId));
 
-        setCurrentTitle('');
+        setCurrentTitleId('');
+        setInputValue('')
     }
 
     const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -211,12 +243,13 @@ export default function Home() {
 
     const clearAllChats = () => {
         localStorage.removeItem('CHAT-LOGS');
-        setCurrentTitle('');
+        localStorage.removeItem('CHAT-TITLES');
+        setCurrentTitleId('');
         setChatLogs([]);
     }
 
     const openSettingsOption = (option: string) => {
-        console.log(option)
+        // console.log(option)
         setSettingsOption(option);
     }
 
@@ -229,73 +262,157 @@ export default function Home() {
         }
     }
 
+    const findTitleByCurrentId = () => {
+        const currentChatTitle = chatTitles.find((chatTitle) => chatTitle.id === currentTitleId);
+        if (currentChatTitle) {
+            return currentChatTitle.title;
+        }
+    }
+
+    const editingTitle = (index: number, chatTitle: ChatTitle) => {
+        // 在点击修改按钮后，将鼠标焦点聚焦到输入框
+        // 聚焦的操作可能在渲染过程中发生得太早。在某些情况下，由于渲染和更新的顺序，需要在聚焦之前等待一些时间。
+        // 使用 setTimeout 设置延迟为 0 的方式通常被用来推迟一个任务，以确保它在当前任务完成后执行，而不会阻塞其他任务的执行。这样可以确保在下一个事件循环周期中执行聚焦操作，以确保输入框已经正确渲染并可见。
+        setTimeout(() => {
+            (inputEditedRef.current as unknown as HTMLInputElement)?.focus();
+        }, 0);
+        setEditedText(chatTitle.title);
+        setEditingIndex(index);
+    }
+
+    const saveNewTitle = (titleId: string) => {
+        setChatTitles(prevTitles => {
+            const newChatTitles = prevTitles.map(chatTitle => {
+                if (chatTitle.id === titleId) {
+                    return {
+                        ...chatTitle,
+                        title: editedText
+                    };
+                }
+                return chatTitle;
+            });
+
+            localStorage.setItem('CHAT-TITLES', JSON.stringify(newChatTitles));
+            return newChatTitles;
+        });
+
+        setEditingIndex(-1);
+        setEditedText('');
+    }
+
+    const handleEditingIndex = () => {
+        setEditingIndex(-1);
+        setEditedText('');
+    }
+
     return (
         <div className="chat text-[0.9rem]">
             {contextHolderMessage}
             {contextHolderNotification}
 
+            {/*侧边栏*/}
             <section className={`chat-side-bar ${showSideBarFlag ? 'show-menu' : ''}`}>
                 <button className="new-chat" onClick={createNewChat}>+ New chat</button>
                 {/*这里有一个flex布局，设置中间的高度为100%即可填充满*/}
                 <ul className="chat-history d m-[10px] text-left h-[100%] ">
                     {
-                        uniqueTitles?.map((uniqueTitle, index) => {
+                        chatTitles?.map((chatTitle, index) => {
                             return <div key={index}>
-                                <li className={`flex items-center justify-between hover:bg-[#2a2b32] hover:cursor-pointer p-4 list-none rounded-[5px] ${uniqueTitle === currentTitle ? 'bg-[#343541]' : ''}`}
-                                    onClick={() => uniqueTitleSwitch(uniqueTitle)}
-                                >
+                                <li className={`flex items-center justify-between hover:bg-[#2a2b32] hover:cursor-pointer p-4 list-none rounded-[5px] ${chatTitle.id === currentTitleId ? 'bg-[#343541]' : ''}`}
+                                    onClick={() => titleSwitch(chatTitle.id)}>
                                     <BiMessageDetail className="inline mr-3"/>
-                                    <span className="chat-history-title inline text-left w-[100%]">{uniqueTitle}</span>
-                                    <MdDeleteOutline className="inline ml-3"
-                                                     onClick={(event) => {
-                                                         event.stopPropagation(); // 阻止事件冒泡
-                                                         deleteUniqueTitle(uniqueTitle)
-                                                     }}
-                                    />
+                                    {
+                                        editingIndex === index ? (
+                                            <input
+                                                className="bg-transparent focus:outline-none border-[1px] border-blue-500 rounded-[5px] w-full mr-3 text-ellipsis line-clamp-1 p-1"
+                                                type="text"
+                                                value={editedText}
+                                                onChange={(event) => setEditedText(event.target.value)}
+                                                ref={inputEditedRef}
+                                            />
+                                        ) : (
+                                            <span
+                                                className="chat-history-title inline text-left w-[100%] text-ellipsis line-clamp-1">{chatTitle.title}</span>
+                                        )
+                                    }
+
+                                    {editingIndex === index ?
+                                        <div className="flex justify-between items-center gap-1">
+                                            <RiCheckFill className="hover:text-blue-500"
+                                                         onClick={() => saveNewTitle(chatTitle.id)}/>
+                                            <RiCloseFill className="inline ml-3 hover:text-red-500"
+                                                         onClick={handleEditingIndex}/>
+                                        </div>
+                                        :
+                                        <div className="flex justify-between items-center gap-1">
+                                            <MdDriveFileRenameOutline className="hover:text-blue-500"
+                                                                      onClick={() => editingTitle(index, chatTitle)}/>
+                                            <MdDeleteOutline className="inline ml-3 hover:text-red-500"
+                                                             onClick={(event) => {
+                                                                 event.stopPropagation(); // 阻止事件冒泡
+                                                                 deleteTitle(chatTitle.id)
+                                                             }}
+                                            />
+                                        </div>
+                                    }
                                 </li>
                             </div>
                         })
                     }
                 </ul>
                 <nav className="flex flex-col gap-1 border-t border-solid border-white border-opacity-50 px-2 py-3">
-                    <button
-                        className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]">
-                        <Link href="https://blog.huangrx.cn">Huangrx&apos;s blog</Link>
-                    </button>
+                    <Link href="https://blog.huangrx.cn">
+                        <button
+                            className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]">
+                            <div>
+                                Blog
+                            </div>
+                            <IoIosArrowRoundForward className="h-4 w-4 flex-shrink-0 text-gray-500"/>
+                        </button>
+                    </Link>
                     <button
                         className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]"
                         onClick={showSettings}>
                         <div>
-                            Made By Huangrx
+                            Settings
                         </div>
-                        <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24"
-                             strokeLinecap="round" strokeLinejoin="round"
-                             className="h-4 w-4 flex-shrink-0 text-gray-500" height="1em" width="1em"
-                             xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="1"></circle>
-                            <circle cx="19" cy="12" r="1"></circle>
-                            <circle cx="5" cy="12" r="1"></circle>
-                        </svg>
+                        <RiMoreLine className="h-4 w-4 flex-shrink-0 text-gray-500"/>
 
                     </button>
                 </nav>
             </section>
 
+            {/*聊天记录界面*/}
             <section className="chat-body h-[100%]  flex flex-col bg-[#444654]">
                 <div className="flex justify-start items-center md:invisible md:hidden px-6 py-2 bg-[#343541]">
                     <MdOutlineGridView className="justify-start" onClick={showSideBar}/>
                     <div className="justify-end flex-grow text-center">
-                        {currentTitle}
+                        {findTitleByCurrentId() as React.ReactNode}
                     </div>
                 </div>
 
                 <div className="chat-body-content justify-center flex-grow overflow-y-auto" ref={chatContentRef}>
                     {
-                        currentTitle.length === 0 ?
+                        currentTitleId.length === 0 ?
                             <div className="h-[100%] text-center mx-auto">
-                                <h1 className="text-white bg-clip-text pt-[5vh] md:pt-[15vh] font-bold text-[20px] pb-[2vh]">Huangrx`s
-                                    Chat
-                                    Ai Bot</h1>
+                                <div
+                                    className="text-white bg-clip-text pt-[5vh] md:pt-[15vh] font-bold text-[20px] pb-[2vh]">Huangrx&apos;s
+                                    Chat Ai Bot
+                                </div>
+                                <div className="flex justify-center items-center gap-5 py-3">
+                                    <div className="text-[1.2rem]">
+                                        Model:
+                                    </div>
+                                    <Select
+                                        defaultValue="gpt-3.5-turbo"
+                                        style={{width: 180, backgroundColor: "#202123"}}
+                                        options={[
+                                            {value: 'gpt-3.5-turbo', label: 'gpt-3.5-turbo'},
+                                            {value: 'gpt-4', label: 'gpt-4'}
+                                        ]}
+                                        onClick={acquireModelList}
+                                    />
+                                </div>
                                 <div className="cards">
                                     <article className="card card--1">
                                         <div className="card__img"></div>
@@ -304,9 +421,11 @@ export default function Home() {
                                         </a>
                                         <div className="card__info">
                                             <span className="card__category">Introducing ChatGPT</span>
-                                            <p className="card__title">OpenAI 的 GPT（生成式预训练转换器）模型经过训练可以理解自然语言和代码。GPT
+                                            <div className="card__title my-2 line-clamp-3 text-ellipsis">OpenAI 的
+                                                GPT（生成式预训练转换器）模型经过训练可以理解自然语言和代码。GPT
                                                 提供文本输出以响应其输入。GPT 的输入也称为“提示”。设计提示本质上是您“编程”GPT
-                                                模型的方式，通常是通过提供说明或一些示例来说明如何成功完成任务。</p>
+                                                模型的方式，通常是通过提供说明或一些示例来说明如何成功完成任务。
+                                            </div>
                                         </div>
                                     </article>
                                 </div>
@@ -319,12 +438,12 @@ export default function Home() {
                                             return (
                                                 <div key={index}>
                                                     <div
-                                                        className={`${chatLog.type === 'user' ? 'bg-customBlack' : 'bg-customBlack2'}`}>
+                                                        className={`${chatLog.role === 'user' ? 'bg-customBlack' : 'bg-customBlack2'}`}>
                                                         <div
                                                             className="flex p-4 gap-4 leading-8 text-white md:gap-6 md:max-w-2xl lg:max-w-[38rem] xl:max-w-3xl md:py-6 lg:px-0 m-auto ">
                                                             <div className="min-w-[24px] min-h-[24px] pt-1">
                                                                 {
-                                                                    chatLog.type !== 'user' ?
+                                                                    chatLog.role !== 'user' ?
                                                                         <svg d="1686038749044" className="icon"
                                                                              viewBox="0 0 1024 1024"
                                                                              version="1.1"
@@ -351,8 +470,8 @@ export default function Home() {
                                                             </div>
 
                                                             {
-                                                                chatLog.type === 'user' ? <div
-                                                                        className="whitespace-pre-wrap">{chatLog.message}</div> :
+                                                                chatLog.role === 'user' ? <div
+                                                                        className="whitespace-pre-wrap">{chatLog.content}</div> :
                                                                     <ReactMarkdown
                                                                         className="markdown-body overflow-auto"
                                                                         remarkPlugins={[remarkGfm]}
@@ -403,7 +522,7 @@ export default function Home() {
                                                                             },
                                                                         }}
                                                                     >
-                                                                        {chatLog.message}
+                                                                        {chatLog.content}
                                                                     </ReactMarkdown>
                                                             }
                                                         </div>
@@ -440,7 +559,8 @@ export default function Home() {
                                     placeholder="Type your message ..."
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
-                                    onKeyDown={(e) => handleInputKeyDown(e)}/>
+                                    onKeyDown={(e) => handleInputKeyDown(e)}
+                                    disabled={isLoading}/>
                             <button
                                 className="roudned-lg p-4 y-[15px] md:p-6 rounded-r-xl text-white font-semibold focus:outline-none transition-colors duration-300"
                                 type="submit"
@@ -463,6 +583,7 @@ export default function Home() {
                 <RiCloseFill className="show-menu-close-icon" onClick={showSideBar}/>
             </div>
 
+            {/*设置页面*/}
             <div
                 className={`${showSettingsFlag ? 'show-settings bg-black bg-opacity-80 flex items-center justify-center' : 'invisible hidden'}`}>
                 <div
@@ -550,7 +671,12 @@ export default function Home() {
 }
 
 interface ChatMessage {
+    id: string;
+    role: string;
+    content: string;
+}
+
+interface ChatTitle {
+    id: string;
     title: string;
-    type: string;
-    message: string;
 }

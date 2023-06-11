@@ -190,11 +190,6 @@
     color: #868686;
 }
 
-.card__title {
-    margin-top: 5px;
-    margin-bottom: 10px;
-}
-
 .card:hover .card__img--hover {
     height: 100%;
     opacity: 0.3;
