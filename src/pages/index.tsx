@@ -260,7 +260,7 @@ export default function Home() {
                 <nav className="flex flex-col gap-1 border-t border-solid border-white border-opacity-50 px-2 py-3">
                     <button
                         className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]">
-                        <Link href="https://blog.huangrx.cn">Huangrx's blog</Link>
+                        <Link href="https://blog.huangrx.cn">Huangrx&apos;s blog</Link>
                     </button>
                     <button
                         className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]"
