@@ -379,7 +379,7 @@ export default function Home() {
                         }
                     </ul>
                     <nav className="flex flex-col gap-1 border-t border-solid border-white border-opacity-50 px-2 py-3">
-                        <Link href="https://blog.huangrx.cn">
+                        <Link href="https://www.huangrx.cn/home">
                             <button
                                 className="appearance-none focus:outline-none flex justify-between items-center w-full px-2 py-3 hover:bg-[#343541] rounded-[5px]">
                                 <div>
